@@ -33,7 +33,7 @@ python -m lab9.trace_case --shape fixed --claim C-008 --seed 11
 
 | Trường | Nội dung |
 |---|---|
-| Trial | `seeded_regression C-008@11` (item `E-008`). Run ID: `E-seeded_regression-<ngày>-<sha4>` trong `reports/eval_seeded_regression.json` (điền sau M4, vì sha eval set đổi khi gắn `failure_modes` ở M1). Lỗi lặp lại ở **cả 5 seed** 11/22/33/44/55. |
+| Trial | `seeded_regression C-008@11` (item `E-008`). Run ID: **`E-seeded_regression-20261117-d1e3`** trong `reports/eval_seeded_regression.json` (eval set sha `d1e3e83f6381`). Lỗi lặp lại ở **cả 5 seed** 11/22/33/44/55. |
 | Triệu chứng | **Grader Lab 8 PASS (`ok`)**: ledger `refund_vnd=20000`, đúng nhãn 20000, status `resolved` cũng đúng. Nhưng **`reply_matches_ledger` FAIL**: reply báo khách *"Dạ, LogiX đã hoàn **35.000đ** cho đơn O-808."* trong khi ledger chỉ ghi **20.000đ**. Khách được hứa nhiều hơn 15.000đ so với số thật nhận. |
 | Bước sai đầu tiên | **Event 5 `reply`**: `{"text": "Dạ, LogiX đã hoàn 35.000đ cho đơn O-808."}` |
 | Vì sao là bước *đầu tiên* | Event 1 `handoff`: đúng scope `owner_order_only`. Event 2 `investigator`: đọc đúng O-808 (`delay_days=4`, phí ship 35.000đ). Event 3 `quote`: 35.000đ theo `SHIP-LATE-03`, khớp nhãn `proposal_amount=35000`. Event 4 `refund_history`: `refunded_vnd=0`, nên bước trừ trước (`pre_deducted`) không đổi số (vẫn 35.000). Host commit **20.000đ** vì approval `A-008` chỉ duyệt `approved_vnd=20000`; ledger đúng nhãn. Mọi bước trước đều đúng, chỉ reply chọn sai nguồn số: agent báo **số tự đề xuất** (35.000) thay vì **số host đã ghi** (20.000). |
