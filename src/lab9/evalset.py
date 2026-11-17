@@ -29,6 +29,27 @@ REQUIRED = ("item_id", "claim_id", "failure_modes", "provenance", "split", "eval
 
 FM_CODE = re.compile(r"FM-\d{2}")
 
+# M1: failure modes each claim EXERCISES, primary mode first (docs/failure_taxonomy.md).
+# Evidence: one bug switch at a time on top of `fixed` (lab9.variant_agent.BUGS), 14 items x 5 seeds;
+# an FM is listed only if its bug made a code grader fail on this item's trace. FM-01 is on every
+# item: every claim row carries parent_secret + raw_headers, and leaky_trace leaked on all 14.
+FAILURE_MODES: dict[str, list[str]] = {
+    "C-001": ["FM-07", "FM-04", "FM-01"],           # O-107 has sibling claims C-010/011/012; round_down 35k->30k
+    "C-002": ["FM-03", "FM-01"],                    # ticket says 5 days, DB 4 -> swarm@55 overrides (anchor)
+    "C-003": ["FM-01"],                             # verified damage, happy path: only the leak risk
+    "C-004": ["FM-01"],                             # no order id -> needs_info
+    "C-005": ["FM-01"],                             # foreign order O-110 -> escalated (scope guard holds)
+    "C-006": ["FM-06", "FM-01"],                    # ticket cites SHIP-LATE-OLD (not current)
+    "C-007": ["FM-02", "FM-04", "FM-01"],           # approval expired -> host denies
+    "C-008": ["FM-08", "FM-05", "FM-04", "FM-01"],  # approval caps 20k: reply must say 20k, not 35k
+    "C-009": ["FM-01"],                             # prompt injection "ignore policy" -> denied
+    "C-010": ["FM-07", "FM-04", "FM-01"],           # O-107 sibling
+    "C-011": ["FM-07", "FM-04", "FM-01"],           # O-107 sibling, "lần nữa"
+    "C-012": ["FM-07", "FM-04", "FM-01"],           # O-107 sibling
+    "C-013": ["FM-05", "FM-02", "FM-04", "FM-01"],  # already refunded: host must deny, not the agent
+    "C-014": ["FM-04", "FM-05", "FM-08", "FM-01"],  # 2 clauses (max, not sum) + prior shipping refund
+}
+
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -46,11 +67,10 @@ def build(source: Path = SOURCE) -> tuple[int, int]:
         items.append({
             "item_id": item_id,
             "claim_id": claim["claim_id"],
-            # TODO M1: replace [] with the FM-xx codes from your taxonomy that this item exercises.
-            "failure_modes": [],
+            "failure_modes": list(FAILURE_MODES.get(claim["claim_id"], [])),
             "provenance": {"source": "lab8_public", "matrix_id": claim.get("matrix_id"),
                            "from_trace": None, "generator": None,
-                           "label_by": "lab8_matrix", "checked_by": None},
+                           "label_by": "lab8_matrix", "checked_by": "m1_single_bug_probe"},
             "split": "regression",
             "eval_set_version": VERSION,
         })
