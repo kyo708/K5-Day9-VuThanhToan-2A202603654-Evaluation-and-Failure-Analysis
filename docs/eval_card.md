@@ -60,3 +60,21 @@ Baseline không hoàn hảo: `swarm_reference` dính FM-03 ở seed 55 trên C-0
 ## Khi nào tăng eval-set version
 - Thêm hoặc bớt item (ví dụ biến trace case thành item có `provenance.from_trace`, thêm adversarial pack ở v2), đổi nhãn (như sửa nhãn sai H-081 ở tập judge), hoặc đổi cách gắn `failure_modes`: tăng `eval_set_version`, **chạy lại baseline trên `main`** rồi mới so sánh.
 - Trên cùng một version, ngưỡng chỉ được **siết chặt hơn** (ratchet). Đổi ngưỡng hay metric thì tăng `metric_spec_version` và ghi lý do vào PRD.
+
+## v2 (Advanced): slice, pass^k, adversarial pack
+Eval set v2 `87870ce87367` = 14 item v1 + 14 item adversarial (`data/eval/adversarial_v2.json`), map cơ chế → FM trong `config/fm_map.yaml`; `python -m lab9.evalset --v2` = 0 problem, mỗi FM bị tấn công có ≥3 item. Spec `config/metric_spec_v2.yaml` (v2.0), baseline `reports/baseline_v2.json` run `E-swarm-20261118-8787`.
+
+**Ngưỡng `pass_hat_5` chọn từ A/A.** `python -m lab9.mutation --spec config/metric_spec_v2.yaml --aa 66,77,88,99,110`: `swarm` cho `pass_hat_5` = 0.8929 trên cả hai bộ seed, Δ = 0 ở mọi metric (MockLLM deterministic theo seed, lỗi FM-03 của swarm phụ thuộc item chứ không phụ thuộc giá trị seed). Sàn **0.85** (blocking): dưới baseline (baseline so với chính nó vẫn merge), trên `flaky_regression` (0.5714). Với LLM thật, sampling làm A/A Δ > 0; phải chạy A/A nhiều lần, lấy dải nhiễu và đặt sàn **ngoài** dải đó, nếu không gate sẽ chặn PR trung thực ngẫu nhiên.
+
+**Slice nào bắt lỗi nào** (scorecard `python -m lab9.mutation --spec config/metric_spec_v2.yaml --baseline reports/baseline_v2.json`: 3/3, 0 báo nhầm):
+
+| Variant | Kỳ vọng | Bị chặn bởi |
+|---|---|---|
+| `fixed`, `honest_refactor` | merge | — (merge) |
+| `seeded_regression` | block | `pass_rate`, `refund_amount_correct`, `pass_hat_5`, `reply_matches_ledger`, mọi slice |
+| `slice_regression` (FM-04 cộng clause, seed lẻ) | block | **chỉ** `slice:money_movement/pass_rate` và `slice:money_movement/refund_amount_correct`; `pass_rate` trung bình 0.9357 vẫn trên sàn 0.85 |
+| `flaky_regression` (FM-04 làm tròn, 1/5 seed) | block | `pass_hat_5` 0.5714 < 0.85, `pass_rate`, slice `money_movement` |
+
+Slice tags lấy từ nhãn (`evalset.slices_for`), không từ output agent: `money_movement` (12 item, refund > 0), `adversarial` (14), `denial` (11). `reply_matches_ledger` (FM-08, min 1.0) giữ blocking ở v2.
+
+**Giới hạn cỡ mẫu.** 5 seed/item: bug xuất hiện ở 1/5 seed bị `pass_hat_5` bắt vì nó rơi vào nhiều item; nhưng bug chỉ ở 1/3 seed hoặc chỉ trên 1 item thì mỗi item chỉ có 1–2 lần fail, `pass_hat_5` giảm 1/28 ≈ 0.036/item và CI paired bootstrap trên 12–14 item của slice vẫn chạm 0. Muốn phát hiện ổn định cần nhiều seed hơn (≥10) hoặc nhiều item hơn trên slice đó.
