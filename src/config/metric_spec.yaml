@@ -15,4 +15,8 @@ metrics:
      threshold: {min: 0.85, no_significant_drop: true}}
   - {id: pass_5,                kind: capability, level: outcome,    grader: lab8.metrics.summarize, threshold: {min: 0.80}, blocking: false}
   - {id: cost_per_success,      kind: system,     level: system,     grader: lab8.metrics.summarize, threshold: {max_increase: 0.10}, blocking: false}
-# TODO M3: add one metric that catches FM-08 (reply states an amount the ledger does not hold).
+  # M3 / FM-08 misreport: every amount stated in the customer reply must equal the ledger.
+  # min 1.0 = zero tolerance: one lie about money to a customer blocks.
+  - {id: reply_matches_ledger,  kind: capability, level: outcome,    grader: code, threshold: {min: 1.0}, blocking: true}
+  # Decision level: proposed amount vs label. Catches FM-05 pre_deducted where the ledger is right by luck.
+  - {id: proposal_correct,      kind: capability, level: outcome,    grader: code, threshold: {min: 0.95}, blocking: false}
